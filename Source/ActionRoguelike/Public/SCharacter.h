@@ -11,6 +11,8 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class USInteractionComponent;
+class UAnimMontage;
 
 UCLASS()
 class ACTIONROGUELIKE_API ASCharacter : public ACharacter
@@ -22,11 +24,27 @@ public:
 	ASCharacter();
 
 protected:
+
+	UPROPERTY(EditAnywhere, Category = Attack)
+	TSubclassOf<AActor> ProjectileClass;
+
+	UPROPERTY(EditAnywhere, Category = Attack)
+	TSubclassOf<AActor> SpecialProjectileClass;
+
+	UPROPERTY(EditAnywhere, Category = Attack)
+	TSubclassOf<AActor> TeleportProjectileClass;
+
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* SpringArmComp;
 
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* CameraComp;
+
+	UPROPERTY(VisibleAnywhere)
+	USInteractionComponent* InteractionComp;
+
+	UPROPERTY(EditAnywhere, Category = Attack)
+	UAnimMontage* AttackAnim;
 
 	UPROPERTY(EditAnywhere, Category = Input)
 	UInputMappingContext* MappingContext;
@@ -36,6 +54,27 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = Input)
 	UInputAction* LookAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* AttackAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* InteractAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* JumpAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* SpecialAttackAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* TeleportAction;
+
+	FTimerHandle TimerHandle_PrimaryAttack;
+
+	FTimerHandle TimerHandle_SpecialAttack;
+
+	FTimerHandle TimerHandle_Teleport;
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
@@ -43,11 +82,25 @@ protected:
 
 	void Look(const FInputActionValue& Value);
 
+	void PrimaryAttack(const FInputActionValue& Value);
+	
+
+	void PrimaryAttack_TimeElapsed();
+
+	void PrimaryInteract();
+	void SpecialAttack_TimeElapsed();
+
+	void SpecialAttack(const FInputActionValue& Value);
+	void Teleport_TimeElapsed();
+
+	void Teleport(const FInputActionValue& Value);
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+private:
+	FTransform CalculateProjectileSpawnTransform(FActorSpawnParameters& SpawnParams);
 };
