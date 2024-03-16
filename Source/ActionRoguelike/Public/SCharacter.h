@@ -13,6 +13,7 @@ class UInputMappingContext;
 class UInputAction;
 class USInteractionComponent;
 class UAnimMontage;
+class USAttributesComponent;
 
 UCLASS()
 class ACTIONROGUELIKE_API ASCharacter : public ACharacter
@@ -34,14 +35,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = Attack)
 	TSubclassOf<AActor> TeleportProjectileClass;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Components")
 	USpringArmComponent* SpringArmComp;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UCameraComponent* CameraComp;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category = "Components")
 	USInteractionComponent* InteractionComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USAttributesComponent* AttributeComp;
 
 	UPROPERTY(EditAnywhere, Category = Attack)
 	UAnimMontage* AttackAnim;
@@ -70,6 +74,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = Input)
 	UInputAction* TeleportAction;
 
+	UFUNCTION()
+	void OnHealthChanged(AActor* InstigatorActor, USAttributesComponent* OwningComp, float NewHealth, float Delta);
+
 	FTimerHandle TimerHandle_PrimaryAttack;
 
 	FTimerHandle TimerHandle_SpecialAttack;
@@ -94,6 +101,8 @@ protected:
 	void Teleport_TimeElapsed();
 
 	void Teleport(const FInputActionValue& Value);
+
+	virtual void PostInitializeComponents() override;
 
 public:	
 	// Called every frame

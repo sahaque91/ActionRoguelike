@@ -7,6 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // Sets default values
 ASTeleportProjectile::ASTeleportProjectile()
@@ -14,6 +15,8 @@ ASTeleportProjectile::ASTeleportProjectile()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	DetonateDelay = .2f;
+	TeleportDelay = .2f;
 }
 
 // Called when the game starts or when spawned
@@ -22,15 +25,8 @@ void ASTeleportProjectile::BeginPlay()
 	Super::BeginPlay();
 
 	SphereComp->IgnoreActorWhenMoving(GetInstigator(), true);
-	GetWorldTimerManager().SetTimer(TimerHandle_DelayExplode, this, &ASTeleportProjectile::Teleport, .2f);
+	GetWorldTimerManager().SetTimer(TimerHandle_DelayExplode, this, &ASTeleportProjectile::Explode, DetonateDelay);
 	
-}
-
-void ASTeleportProjectile::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
-
-	SphereComp->OnComponentHit.AddDynamic(this, &ASTeleportProjectile::OnComponentHit);
 }
 
 void ASTeleportProjectile::TeleportPlayer()
@@ -42,19 +38,19 @@ void ASTeleportProjectile::TeleportPlayer()
 	Destroy();
 }
 
-void ASTeleportProjectile::Teleport()
+void ASTeleportProjectile::Explode_Implementation()
 {
-	GetWorldTimerManager().ClearTimer((TimerHandle_DelayExplode));
-	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), DetonateEffect, GetActorLocation(), GetActorRotation());
-	MovementComp->StopMovementImmediately();
-	GetWorldTimerManager().SetTimer(TimerHandle_DelayTeleport, this, &ASTeleportProjectile::TeleportPlayer, .2f);
-	TeleportPlayer();
-}
+	GetWorldTimerManager().ClearTimer(TimerHandle_DelayExplode);
 
-void ASTeleportProjectile::OnComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
-{
-	
-	
+	UGameplayStatics::SpawnEmitterAtLocation(this, ImpactVFX, GetActorLocation(), GetActorRotation());
+
+	EffectComp->DeactivateSystem();
+
+	MovementComp->StopMovementImmediately();
+	SetActorEnableCollision(false);
+
+	FTimerHandle TimerHandle_DelayedTeleport;
+	GetWorldTimerManager().SetTimer(TimerHandle_DelayedTeleport, this, &ASTeleportProjectile::TeleportPlayer, TeleportDelay);
 }
 
 // Called every frame

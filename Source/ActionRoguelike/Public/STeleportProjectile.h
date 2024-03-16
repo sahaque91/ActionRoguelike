@@ -26,19 +26,18 @@ protected:
 
 	FTimerHandle TimerHandle_DelayTeleport;
 
-	UPROPERTY(EditAnywhere)
-	UParticleSystem* DetonateEffect;
+	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
+	float TeleportDelay;
 
-	UFUNCTION()
-	void OnComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
+	UPROPERTY(EditDefaultsOnly, Category = "Teleport")
+	float DetonateDelay;
+
+	virtual void Explode_Implementation() override;
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	virtual void PostInitializeComponents() override;
 	void TeleportPlayer();
-
-	void Teleport();
 };
