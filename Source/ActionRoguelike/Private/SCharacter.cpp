@@ -10,6 +10,8 @@
 #include "SAttributesComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "SActionComponent.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -24,6 +26,9 @@ ASCharacter::ASCharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 400.f, 0.f);
 
+	TimeToHitParamName = "TimeToHit";
+	HandSocketName = "Muzzle_01";
+
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>("SpringArmComponent");
 	SpringArmComp->bUsePawnControlRotation = true;
 	SpringArmComp->SetupAttachment(RootComponent);
@@ -34,6 +39,8 @@ ASCharacter::ASCharacter()
 	InteractionComp = CreateDefaultSubobject<USInteractionComponent>(TEXT("InteractionComp"));
 
 	AttributeComp = CreateDefaultSubobject<USAttributesComponent>(TEXT("AttributeComp"));
+
+	ActionComp = CreateDefaultSubobject<USActionComponent>(TEXT("ActionComp"));
 }
 
 void ASCharacter::PostInitializeComponents()
@@ -43,12 +50,27 @@ void ASCharacter::PostInitializeComponents()
 	AttributeComp->OnHealthChanged.AddDynamic(this, &ASCharacter::OnHealthChanged);
 }
 
+FVector ASCharacter::GetPawnViewLocation() const
+{
+	return CameraComp->GetComponentLocation();
+}
+
 void ASCharacter::OnHealthChanged(AActor* InstigatorActor, USAttributesComponent* OwningComp, float NewHealth, float Delta)
 {
+	if (Delta < 0.0f)
+	{
+		GetMesh()->SetScalarParameterValueOnMaterials(TimeToHitParamName, GetWorld()->TimeSeconds);
+
+		// Rage added equal to damage received (Abs to turn into positive rage number)
+		float RageDelta = FMath::Abs(Delta);
+		AttributeComp->ApplyRage(InstigatorActor, RageDelta);
+	}
 	if (NewHealth <= 0.0f && Delta < 0.0f)
 	{
 		APlayerController* PC = Cast<APlayerController>(GetController());
 		DisableInput(PC);
+
+		SetLifeSpan(5.0f);
 	}
 }
 
@@ -88,8 +110,16 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 			EnhancedInputComponent->BindAction(SpecialAttackAction, ETriggerEvent::Triggered, this, &ASCharacter::SpecialAttack);
 			EnhancedInputComponent->BindAction(TeleportAction, ETriggerEvent::Triggered, this, &ASCharacter::Teleport);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ASCharacter::StartSprint);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ASCharacter::StopSprint);
+			EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &ASCharacter::Parry);
 		}
 	}
+}
+
+void ASCharacter::HealSelf(float Amount /* 100 */)
+{
+	AttributeComp->ApplyHealthChange(this, Amount);
 }
 
 void ASCharacter::Move(const FInputActionValue& Value)
@@ -115,9 +145,14 @@ void ASCharacter::Look(const FInputActionValue& Value)
 
 void ASCharacter::PrimaryAttack(const FInputActionValue& Value)
 {
+	ActionComp->StartActionByName(this, "PrimaryAttack");
+}
+
+void ASCharacter::StartAttackEffects()
+{
 	PlayAnimMontage(AttackAnim);
 
-	GetWorldTimerManager().SetTimer(TimerHandle_PrimaryAttack, this, &ASCharacter::PrimaryAttack_TimeElapsed, 0.2f);
+	UGameplayStatics::SpawnEmitterAttached(CastingEffect, GetMesh(), HandSocketName, FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::SnapToTarget);
 }
 
 FTransform ASCharacter::CalculateProjectileSpawnTransform(FActorSpawnParameters& SpawnParams)
@@ -184,11 +219,7 @@ void ASCharacter::SpecialAttack_TimeElapsed()
 void ASCharacter::SpecialAttack(const FInputActionValue& Value)
 {
 
-	PlayAnimMontage(AttackAnim);
-
-	GetWorldTimerManager().SetTimer(TimerHandle_SpecialAttack, this, &ASCharacter::SpecialAttack_TimeElapsed, 0.2f);
-
-	SpecialAttack_TimeElapsed();
+	ActionComp->StartActionByName(this, "SpecialAttack");
 }
 
 void ASCharacter::Teleport_TimeElapsed()
@@ -203,14 +234,20 @@ void ASCharacter::Teleport_TimeElapsed()
 
 void ASCharacter::Teleport(const FInputActionValue& Value)
 {
-	PlayAnimMontage(AttackAnim);
-
-	GetWorldTimerManager().SetTimer(TimerHandle_Teleport, this, &ASCharacter::Teleport_TimeElapsed, 0.2f);
-
-	if (ensureAlways(TeleportProjectileClass))
-	{
-		Teleport_TimeElapsed();
-	}
+	ActionComp->StartActionByName(this, "Teleport");
 }
 
+void ASCharacter::StartSprint()
+{
+	ActionComp->StartActionByName(this, "Sprint");
+}
 
+void ASCharacter::StopSprint()
+{
+	ActionComp->StopActionByName(this, "Sprint");
+}
+
+void ASCharacter::Parry()
+{
+	ActionComp->StartActionByName(this, "Parry");
+}

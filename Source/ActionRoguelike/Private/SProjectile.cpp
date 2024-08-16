@@ -7,6 +7,9 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundCue.h"
+#include "Camera/CameraShakeBase.h"
 
 // Sets default values
 ASProjectile::ASProjectile()
@@ -19,6 +22,9 @@ ASProjectile::ASProjectile()
 	SphereComp->SetCollisionProfileName("Projectile");
 	RootComponent = SphereComp;
 
+	AudioComp = CreateDefaultSubobject<UAudioComponent>("AudioComp");
+	AudioComp->SetupAttachment(RootComponent);
+
 	EffectComp = CreateDefaultSubobject<UParticleSystemComponent>("EffectComp");
 	EffectComp->SetupAttachment(SphereComp);
 
@@ -26,6 +32,11 @@ ASProjectile::ASProjectile()
 	MovementComp->InitialSpeed = 1000.0f;
 	MovementComp->bRotationFollowsVelocity = true;
 	MovementComp->bInitialVelocityInLocalSpace = true;
+
+	ImpactShakeInnerRadius = 250.0f;
+	ImpactShakeOuterRadius = 2500.0f;
+
+	bReplicates = true;
 }
 
 // Called when the game starts or when spawned
@@ -43,6 +54,10 @@ void ASProjectile::OnActorHit(UPrimitiveComponent* HitComponent, AActor* OtherAc
 void ASProjectile::Explode_Implementation()
 {
 	UGameplayStatics::SpawnEmitterAtLocation(this, ImpactVFX, GetActorLocation(), GetActorRotation());
+
+	UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
+
+	UGameplayStatics::PlayWorldCameraShake(this, ImpactShake, GetActorLocation(), ImpactShakeInnerRadius, ImpactShakeOuterRadius);
 
 	EffectComp->DeactivateSystem();
 

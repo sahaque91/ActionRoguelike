@@ -14,6 +14,7 @@ class UInputAction;
 class USInteractionComponent;
 class UAnimMontage;
 class USAttributesComponent;
+class USActionComponent;
 
 UCLASS()
 class ACTIONROGUELIKE_API ASCharacter : public ACharacter
@@ -25,6 +26,12 @@ public:
 	ASCharacter();
 
 protected:
+
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	FName TimeToHitParamName;
+
+	UPROPERTY(VisibleAnywhere, Category = "Effects")
+	FName HandSocketName;
 
 	UPROPERTY(EditAnywhere, Category = Attack)
 	TSubclassOf<AActor> ProjectileClass;
@@ -47,8 +54,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USAttributesComponent* AttributeComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USActionComponent* ActionComp;
+
 	UPROPERTY(EditAnywhere, Category = Attack)
 	UAnimMontage* AttackAnim;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	UParticleSystem* CastingEffect;
 
 	UPROPERTY(EditAnywhere, Category = Input)
 	UInputMappingContext* MappingContext;
@@ -69,10 +82,16 @@ protected:
 	UInputAction* JumpAction;
 
 	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* ParryAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
 	UInputAction* SpecialAttackAction;
 
 	UPROPERTY(EditAnywhere, Category = Input)
 	UInputAction* TeleportAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* SprintAction;
 
 	UFUNCTION()
 	void OnHealthChanged(AActor* InstigatorActor, USAttributesComponent* OwningComp, float NewHealth, float Delta);
@@ -91,6 +110,7 @@ protected:
 
 	void PrimaryAttack(const FInputActionValue& Value);
 	
+	void StartAttackEffects();
 
 	void PrimaryAttack_TimeElapsed();
 
@@ -102,7 +122,15 @@ protected:
 
 	void Teleport(const FInputActionValue& Value);
 
+	void StartSprint();
+
+	void StopSprint();
+
+	void Parry();
+
 	virtual void PostInitializeComponents() override;
+
+	virtual FVector GetPawnViewLocation() const override;
 
 public:	
 	// Called every frame
@@ -110,6 +138,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(Exec)
+	void HealSelf(float Amount = 100);
 private:
 	FTransform CalculateProjectileSpawnTransform(FActorSpawnParameters& SpawnParams);
 };

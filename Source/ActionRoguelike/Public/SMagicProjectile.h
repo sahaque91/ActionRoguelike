@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "SProjectile.h"
 #include "GameFramework/Actor.h"
+#include "GameplayTags.h"
 #include "SMagicProjectile.generated.h"
 
+class USActionEffect;
 
 
 UCLASS()
@@ -22,6 +24,12 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Tags")
+	FGameplayTag ParryTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	TSubclassOf<USActionEffect> BurningActionClass;
+		
 	UPROPERTY(EditDefaultsOnly, Category = "Damage")
 	float DamageAmount;
 
